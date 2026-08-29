@@ -1,0 +1,20 @@
+{
+  "format": "pretrain-finetune-shakespeare.byte-bpe",
+  "version": 1,
+  "tokenizer_type": "byte_bpe",
+  "encoding": "utf-8",
+  "pretoken_pattern": "\\w+|[^\\w\\s]+|\\s+",
+  "target_vocab_size": 20000,
+  "vocab_size": 20000,
+  "max_token_id": 19999,
+  "special_tokens": {
+    "<|endoftext|>": 256
+  },
+  "training_corpus": {
+    "name": "tokenizer-fineweb-500MB.txt",
+    "size_bytes": 500031637,
+    "sha256": "593e65badfb63444e14349a1808c430828d21a1fa89fa46f9edac06e8a0a3670"
+  },
+  "vocab_file": "vocab.json",
+  "merges_file": "merges.json"
+}

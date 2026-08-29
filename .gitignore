@@ -1,0 +1,23 @@
+.DS_Store
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+.env
+.env.*
+!.env.example
+
+# Downloaded corpora and interrupted downloads
+data/raw/*fineweb*.txt
+data/**/*.part
+
+# Generated token arrays
+data/processed/*.bin
+
+# Model outputs (tokenizer artifacts are intentionally not ignored)
+checkpoints/**
+*.pt
+*.pth
+*.ckpt

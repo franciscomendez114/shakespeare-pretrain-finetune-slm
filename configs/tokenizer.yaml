@@ -1,0 +1,3 @@
+vocab_size: 20_000
+corpus: data/raw/tokenizer-fineweb-500MB.txt
+artifacts_dir: tokenizer/artifacts

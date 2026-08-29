@@ -1,0 +1,14 @@
+batch_size: 32   # A100: micro-batch; 32 x 4 accum = 128 effective
+learning_rate: 0.0003 # 3e-4
+weight_decay: 0.01 # 1e-2
+grad_clip_norm: 1.0
+eval_iters: 20
+eval_interval: 150
+checkpoint_interval: 1000
+checkpoint_path: "checkpoints/pretrain"   # relative to repo root
+num_warmup_steps: 500
+init_linear_factor: 0.05
+MAX_TRAINING_STEPS: 6800   # ~0.89B tokens, Chinchilla-optimal for 44.4M params
+grad_accum_steps: 4
+
+

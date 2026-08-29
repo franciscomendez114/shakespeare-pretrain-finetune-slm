@@ -1,0 +1,13 @@
+batch_size: 8            # 8 x 2 accum = 16 sequences (16k tokens) per step
+grad_accum_steps: 2
+learning_rate: 0.00003   # 3e-5, ~10x below pretrain so we don't wash out what was learned
+weight_decay: 0.01
+grad_clip_norm: 1.0
+init_linear_factor: 0.05
+num_warmup_steps: 20
+MAX_TRAINING_STEPS: 300  # ~10 epochs over the 460 training windows
+eval_interval: 25
+eval_iters: 6            # the val split is only 52 windows at ctx 1024
+checkpoint_interval: 100
+checkpoint_path: "checkpoints/finetune"
+pretrained_checkpoint: "checkpoints/pretrain/final.pt"

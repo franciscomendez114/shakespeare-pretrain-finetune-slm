@@ -1,0 +1,5 @@
+context_size: 1024
+d_embed: 512
+num_layers: 8
+num_heads: 8
+dropout: 0.1
