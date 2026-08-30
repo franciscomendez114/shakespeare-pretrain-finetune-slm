@@ -24,6 +24,8 @@ class BPE_Tokenizer:
         self.id_to_bytes = {i: bytes([i]) for i in range(256)}
         self.merges = []
         self.merge_lookup = {}
+        # word -> token ids, reused across encode() calls
+        self._word_cache = {}
         self.training_corpus = {}
 
     @property
@@ -142,6 +144,7 @@ class BPE_Tokenizer:
 
     def _build_merge_lookup(self):
         self.merge_lookup = {(left, right): (rank, new_id) for rank, (left, right, new_id) in enumerate(self.merges)}
+        self._word_cache = {}
 
     def _encode_bytes(self, raw_bytes):
         tokens = list(raw_bytes)
@@ -165,7 +168,7 @@ class BPE_Tokenizer:
     def encode(self, text):
         token_ids = []
         sections = text.split(EOT)
-        cache = {}
+        cache = self._word_cache
 
         for section_index, section in enumerate(sections):
             for token in re.findall(PATTERN, section):
