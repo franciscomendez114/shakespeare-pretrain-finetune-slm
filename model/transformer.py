@@ -60,16 +60,8 @@ class TransformerBlock(nn.Module):
 
     self.norm1 = nn.RMSNorm(self.d_embed)
     self.norm2 = nn.RMSNorm(self.d_embed)
-    self.norm3 = nn.RMSNorm(self.d_embed)
 
-    self.attn1 = MultiHeadAttention(
-        num_heads=self.num_heads,
-        d_embed=self.d_embed,
-        head_size=self.d_embed // self.num_heads,
-        dropout=self.dropout
-    )
-
-    self.attn2 = MultiHeadAttention(
+    self.attn = MultiHeadAttention(
         num_heads=self.num_heads,
         d_embed=self.d_embed,
         head_size=self.d_embed // self.num_heads,
@@ -91,17 +83,16 @@ class TransformerBlock(nn.Module):
                     layer.bias.data.fill_(0.0)
 
   def forward(self, x):
-    x = x + self.attn1(self.norm1(x)) # pre-norm formulation
-    x = x + self.attn2(self.norm2(x))
-    x = x + self.mlp(self.norm3(x))
+    x = x + self.attn(self.norm1(x)) # pre-norm formulation
+    x = x + self.mlp(self.norm2(x))
 
     return x
 
 
 # Main Model
 class Model(nn.Module):
-  # every block writes to the residual stream 3 times (attn1, attn2, mlp)
-  RESID_WRITES_PER_BLOCK = 3
+  # every block writes to the residual stream twice (attn, mlp)
+  RESID_WRITES_PER_BLOCK = 2
 
   def __init__(self, d_embed:int, vocab_size:int, max_ctx:int, num_layers:int, numHeads:int, dropout:float):
     super(Model, self).__init__()
@@ -138,8 +129,7 @@ class Model(nn.Module):
     # residual branch so the stream doesn't compound with depth
     resid_std = 0.02 / math.sqrt(self.RESID_WRITES_PER_BLOCK * self.num_layers)
     for block in self.layers:
-      block.attn1.linear.weight.data.normal_(0, resid_std)
-      block.attn2.linear.weight.data.normal_(0, resid_std)
+      block.attn.linear.weight.data.normal_(0, resid_std)
       block.mlp[2].weight.data.normal_(0, resid_std) # 2nd Linear in the MLP
 
     # weight tying: the head and the token embedding share one matrix
