@@ -19,7 +19,7 @@ def unwrap(model):
     return getattr(model, '_orig_mod', model)
 
 
-def save_checkpoint(path, model, optimizer, scheduler, step):
+def save_checkpoint(path, model, optimizer, scheduler, step, best_val=float('inf')):
     #Full training state, written atomically so a disconnect can't corrupt it.
     os.makedirs(os.path.dirname(path), exist_ok=True)
     tmp = path + '.tmp'
@@ -28,6 +28,7 @@ def save_checkpoint(path, model, optimizer, scheduler, step):
         'optimizer': optimizer.state_dict(),
         'scheduler': scheduler.state_dict(),
         'step': step,
+        'best_val': best_val,
     }, tmp)
     os.replace(tmp, path)
 
@@ -46,14 +47,17 @@ def load_checkpoint(path, model, optimizer, scheduler, device):
     unwrap(model).load_state_dict(ckpt['model'])
     optimizer.load_state_dict(ckpt['optimizer'])
     scheduler.load_state_dict(ckpt['scheduler'])
-    return ckpt['step']
+    #best_val defaults for checkpoints written before it was tracked
+    return ckpt['step'], ckpt.get('best_val', float('inf'))
 
 
-def estimate_loss(model, val_loader, eval_iters, device, val_iter=None):
+def estimate_loss(model, val_loader, eval_iters, device):
+    #A fresh iterator every call, so every eval scores the SAME first batches.
+    #Advancing one iterator across evals would mix "model improved" with
+    #"this slice happened to be easier". persistent_workers keeps this cheap.
     model.eval()
     losses = []
-    if val_iter is None:
-        val_iter = iter(val_loader)
+    val_iter = iter(val_loader)
     amp = amp_context(device)
     with torch.no_grad():
         for _ in range(eval_iters):
@@ -69,16 +73,16 @@ def estimate_loss(model, val_loader, eval_iters, device, val_iter=None):
                 loss = F.cross_entropy(logits.view(-1, logits.size(-1)), yb.view(-1))
             losses.append(loss.item())
     model.train()
-    return sum(losses) / len(losses), val_iter
+    return sum(losses) / len(losses)
 
 def train_model(model, max_train_steps, train_loader, val_loader, optimizer, scheduler,
                 grad_clip_mag, device, eval_interval, eval_iters,
-                checkpoint_interval, checkpoint_path, grad_accum_steps, start_step=0):
+                checkpoint_interval, checkpoint_path, grad_accum_steps, start_step=0,
+                best_val=float('inf')):
     model.train()
     window_loss = 0.0
     window_steps = 0
     train_iter = iter(train_loader)
-    val_iter = None
     amp = amp_context(device)
 
     for step in range(start_step + 1, max_train_steps + 1):
@@ -112,14 +116,21 @@ def train_model(model, max_train_steps, train_loader, val_loader, optimizer, sch
         window_steps += 1
 
         if step % eval_interval == 0:
-            val_loss, val_iter = estimate_loss(model, val_loader, eval_iters, device, val_iter)
-            print(f"step {step:,}/{max_train_steps:,} | train {window_loss/window_steps:.4f} | val {val_loss:.4f} | lr {scheduler.get_last_lr()[0]:.2e} | gnorm {grad_norm:.2f}", flush=True)
+            val_loss = estimate_loss(model, val_loader, eval_iters, device)
+            best = val_loss < best_val
+            if best:
+                # keep the best model, not just the last -- val turns up long
+                # before training ends when the finetune set is small
+                best_val = val_loss
+                save_checkpoint(os.path.join(checkpoint_path, "best.pt"), model, optimizer, scheduler, step, best_val)
+            print(f"step {step:,}/{max_train_steps:,} | train {window_loss/window_steps:.4f} | val {val_loss:.4f} | lr {scheduler.get_last_lr()[0]:.2e} | gnorm {grad_norm:.2f}{'  *best' if best else ''}", flush=True)
             window_loss = 0.0
             window_steps = 0
 
         if step % checkpoint_interval == 0:
             # single rolling checkpoint: full state is ~3x the model size, so
             # keeping one per interval would fill a Drive quota fast
-            save_checkpoint(os.path.join(checkpoint_path, "last.pt"), model, optimizer, scheduler, step)
+            save_checkpoint(os.path.join(checkpoint_path, "last.pt"), model, optimizer, scheduler, step, best_val)
 
-    save_checkpoint(os.path.join(checkpoint_path, "final.pt"), model, optimizer, scheduler, max_train_steps)
+    save_checkpoint(os.path.join(checkpoint_path, "final.pt"), model, optimizer, scheduler, max_train_steps, best_val)
+    print(f"best val {best_val:.4f} -> checkpoints/best.pt", flush=True)

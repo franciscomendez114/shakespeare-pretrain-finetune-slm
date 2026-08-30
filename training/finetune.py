@@ -114,9 +114,10 @@ def main():
     # An interrupted finetune resumes itself; otherwise we start from the
     # pretrained weights. Without this the run would train from scratch.
     start_step = 0
+    best_val = float('inf')
     resume_path = os.path.join(CHECKPOINT_DIR, 'last.pt')
     if os.path.exists(resume_path):
-        start_step = load_checkpoint(resume_path, model, optimizer, scheduler, DEVICE)
+        start_step, best_val = load_checkpoint(resume_path, model, optimizer, scheduler, DEVICE)
         print(f"resuming finetune from {resume_path} at step {start_step:,}")
     else:
         if not os.path.exists(PRETRAINED_PATH):
@@ -138,7 +139,7 @@ def main():
                 checkpoint_interval=FINETUNE_CONFIG['checkpoint_interval'],
                 checkpoint_path=CHECKPOINT_DIR,
                 grad_accum_steps=FINETUNE_CONFIG['grad_accum_steps'],
-                start_step=start_step)
+                start_step=start_step, best_val=best_val)
 
 
 if __name__ == '__main__':

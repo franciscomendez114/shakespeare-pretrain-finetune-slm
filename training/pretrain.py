@@ -111,9 +111,10 @@ def main():
 
     # pick up where a disconnected Colab session left off
     start_step = 0
+    best_val = float('inf')
     resume_path = os.path.join(CHECKPOINT_DIR, 'last.pt')
     if os.path.exists(resume_path):
-        start_step = load_checkpoint(resume_path, model, optimizer, scheduler, DEVICE)
+        start_step, best_val = load_checkpoint(resume_path, model, optimizer, scheduler, DEVICE)
         print(f"resuming from {resume_path} at step {start_step:,}")
     
     n_params = sum(p.numel() for p in model.parameters())
@@ -128,7 +129,7 @@ def main():
                 checkpoint_interval=PRETRAIN_CONFIG['checkpoint_interval'],
                 checkpoint_path=CHECKPOINT_DIR,
                 grad_accum_steps=PRETRAIN_CONFIG['grad_accum_steps'],
-                start_step=start_step)
+                start_step=start_step, best_val=best_val)
 
 
 if __name__ == '__main__':

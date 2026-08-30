@@ -5,8 +5,8 @@ weight_decay: 0.01
 grad_clip_norm: 1.0
 init_linear_factor: 0.05
 num_warmup_steps: 20
-MAX_TRAINING_STEPS: 300  # ~10 epochs over the 460 training windows
-eval_interval: 25
+MAX_TRAINING_STEPS: 150  # val bottomed near step 125 last run; best.pt captures the true minimum
+eval_interval: 10       # finer grained so best.pt lands close to the actual minimum
 eval_iters: 6            # the val split is only 52 windows at ctx 1024
 checkpoint_interval: 100
 checkpoint_path: "checkpoints/finetune"
