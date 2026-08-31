@@ -1,3 +1,4 @@
+import json
 import os
 
 import torch
@@ -44,3 +45,36 @@ def load_model(checkpoint_path, device=DEVICE):
     # eval() turns off dropout -- without it every sample would be noisy
     model.eval()
     return model
+
+
+def load_exported_model(export_dir, device=DEVICE):
+    # Load a directory produced by scripts/export_model.py. Unlike load_model()
+    # this reads nothing from configs/ -- everything it needs is in config.json,
+    # so the export can be deployed on its own.
+    export_dir = os.path.join(ROOT, export_dir) if not os.path.isabs(export_dir) else export_dir
+
+    with open(os.path.join(export_dir, 'config.json'), 'r') as f:
+        config = json.load(f)
+
+    model = Model(d_embed=config['d_embed'],
+                  vocab_size=config['vocab_size'],
+                  max_ctx=config['context_size'],
+                  num_layers=config['num_layers'],
+                  numHeads=config['num_heads'],
+                  dropout=0.0)
+
+    weights = torch.load(os.path.join(export_dir, 'model.pt'), map_location='cpu', weights_only=True)
+
+    # fp16 is stored to keep the file small, but CPU kernels for it are slow or
+    # missing, so cast back to fp32 unless we are on a GPU
+    if device.type == 'cpu':
+        weights = {k: v.float() for k, v in weights.items()}
+
+    model.load_state_dict(weights)
+    model.to(device).eval()
+    return model
+
+
+def load_exported_tokenizer(export_dir):
+    export_dir = os.path.join(ROOT, export_dir) if not os.path.isabs(export_dir) else export_dir
+    return BPE_Tokenizer.from_pretrained(os.path.join(export_dir, 'tokenizer'))

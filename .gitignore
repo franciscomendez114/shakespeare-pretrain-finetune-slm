@@ -21,3 +21,6 @@ checkpoints/**
 *.pt
 *.pth
 *.ckpt
+
+# Deployment bundle built by scripts/export_model.py
+export/

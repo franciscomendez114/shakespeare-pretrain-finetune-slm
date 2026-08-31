@@ -27,7 +27,9 @@ class MultiHeadAttention(nn.Module):
     self.linear.bias.data.fill_(0.0)
 
 
-  def forward(self, x):
+  def forward(self, x, cache=None, use_cache=False):
+    # cache holds the keys and values already computed for earlier tokens, so a
+    # decoding step only has to run the new token through the network
     B, T, C = x.shape
 
     q, k, v = self.qkv(x).chunk(3, dim=-1) # each (B, T, num_heads * head_size)
@@ -37,14 +39,27 @@ class MultiHeadAttention(nn.Module):
     k = k.view(B, T, self.num_heads, self.head_size).transpose(1, 2)
     v = v.view(B, T, self.num_heads, self.head_size).transpose(1, 2)
 
+    if cache is not None:
+      past_k, past_v = cache
+      k = torch.cat([past_k, k], dim=2)
+      v = torch.cat([past_v, v], dim=2)
+
+    # With a cache the query is the single new token and every cached key is
+    # already in its past, so no mask is needed. Without one we are running a
+    # whole sequence and the usual causal mask applies.
+    is_causal = cache is None and T > 1
+
     # Flash attention
-    attn_out = F.scaled_dot_product_attention(q, k, v, dropout_p=self.dropout if self.training else 0.0, is_causal=True) # (B, num_heads, T, head_size)
+    attn_out = F.scaled_dot_product_attention(q, k, v, dropout_p=self.dropout if self.training else 0.0, is_causal=is_causal) # (B, num_heads, T, head_size)
 
     # concatenate the heads back together
     attn_out = attn_out.transpose(1, 2).contiguous().view(B, T, self.num_heads * self.head_size) # (B, T, d_embed)
 
     attn_out = self.linear(attn_out) # (B, T, d_embed)
     attn_out = self.lin_dropout(attn_out)
+
+    if use_cache:
+      return attn_out, (k, v)
 
     return attn_out
 
@@ -82,9 +97,16 @@ class TransformerBlock(nn.Module):
                 if layer.bias is not None:
                     layer.bias.data.fill_(0.0)
 
-  def forward(self, x):
-    x = x + self.attn(self.norm1(x)) # pre-norm formulation
+  def forward(self, x, cache=None, use_cache=False):
+    attn_out = self.attn(self.norm1(x), cache, use_cache) # pre-norm formulation
+    if use_cache:
+      attn_out, kv = attn_out
+
+    x = x + attn_out
     x = x + self.mlp(self.norm2(x))
+
+    if use_cache:
+      return x, kv
 
     return x
 
@@ -136,21 +158,33 @@ class Model(nn.Module):
     self.head.weight = self.token_embedding.weight
 
 
-  def forward(self, x):
+  def forward(self, x, cache=None, use_cache=False):
     B, T = x.shape
-    assert T <= self.max_ctx, f"sequence length {T} exceeds max_ctx {self.max_ctx}"
+    # tokens already in the cache sit before these ones, so positions carry on
+    # from there rather than restarting at 0
+    past = cache[0][0].size(2) if cache is not None else 0
+    assert past + T <= self.max_ctx, f"sequence length {past + T} exceeds max_ctx {self.max_ctx}"
 
     token_emb = self.token_embedding(x) # (B, T, d_embed)
 
-    temp = torch.arange(0, T, device=x.device).unsqueeze(0) # (1, T), broadcasts over B
+    temp = torch.arange(past, past + T, device=x.device).unsqueeze(0) # (1, T), broadcasts over B
     pos_emb = self.positional_embedding(temp) # (1, T, d_embed)
 
     x = self.embed_dropout(token_emb + pos_emb)
 
     # Next we need to pass through attention layers
-    for layer in self.layers:
-      x = layer(x)
+    new_cache = []
+    for i, layer in enumerate(self.layers):
+      out = layer(x, cache[i] if cache is not None else None, use_cache)
+      if use_cache:
+        x, kv = out
+        new_cache.append(kv)
+      else:
+        x = out
 
     logits = self.head(self.head_norm(x)) # (B, T, vocab_size)
+
+    if use_cache:
+      return logits, new_cache
 
     return logits
