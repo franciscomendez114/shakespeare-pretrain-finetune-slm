@@ -10,16 +10,38 @@ Weights: **[bahamawama/shakespeare-slm](https://huggingface.co/bahamawama/shakes
 ## Demo
 
 A Gradio app (`app/app.py`) serves both checkpoints with a toggle, sampling
-controls and token-by-token streaming. Same prompt, same settings — only the
-checkpoint differs.
+controls and token-by-token streaming. Every screenshot below is the real app
+running the real weights.
 
-**Fine-tuned on Shakespeare:**
+### What fine-tuning changed
+
+Same prompt, same settings — only the checkpoint differs. The fine-tuned model
+answers in play format with alternating speakers and verse:
 
 ![The fine-tuned model answering a ROMEO: prompt in play format](docs/app-finetuned.png)
 
-**The same prompt, pretrained model only:**
+The pretrained model has never seen a play, so `ROMEO:` is just an unusual
+capitalised token and it continues in the register it was trained on:
 
 ![The pretrained model continuing ROMEO: as ordinary web prose](docs/app-pretrained.png)
+
+### The pretrained model on its own ground
+
+FineWeb-Edu is educational web text, and that is what the pretrained checkpoint
+is actually good at — fluent, well-structured, register-appropriate prose. It
+even invents a plausibly-formatted expert quote:
+
+![The pretrained model continuing a prompt about healthy eating](docs/app-pretrained-health.png)
+
+Fluency arrives long before factual reliability, though. Ask for something that
+needs real knowledge and the prose stays convincing while the content falls apart:
+
+![The pretrained model producing fluent but factually wrong history](docs/app-pretrained-history.png)
+
+That sample runs the French Revolution from 1789 to 1836, has the French
+rebelling against Spain, and puts "General Louis XIII" in the same paragraph as
+Napoleon. Confidently wrong is the expected failure mode at this scale — see
+[Known limitations](#known-limitations).
 
 ## Results
 
@@ -38,52 +60,7 @@ tokenizer built for modern web text is a harder target.
 The pretraining budget is 20.0 tokens per parameter, the Chinchilla
 compute-optimal ratio for this model size, in a single pass with no data repeated.
 
-### What fine-tuning changed
-
-Same prompt, same sampling settings, same app — only the checkpoint differs.
-
-**Pretrained only.** `ROMEO:` carries no special meaning, so the model continues
-in the register it was trained on:
-
-```
-ROMEO: When I was in college, my main area of interest was in the history of
-science and technology. A lot of my research was devoted to micro-scale analysis,
-but the big question was how do people want to handle it?
-A lot has been written about micro scale analysis, and the big question, in
-relation to the big question is how do people want to handle it?
-```
-
-**After fine-tuning.** Play structure, alternating speakers, Elizabethan register:
-
-```
-ROMEO:
-How now! how now! how now! what's that? what is't, I do not know,
-For that which we say hath been our Lord's seal;
-But that for the meaning which we grant, it was the right
-Of the king to be the king's sworn seal.
-
-KING HENRY VI:
-'Tis God's seal and all his possessions
-Upon his knees.
-
-LUCIO:
-My lord, we have no right nor lawful claim
-To the crown our king holds in the hands.
-```
-
-The pretrained model is a competent web-text continuer on its own ground:
-
-```
-The mitochondria produces ATP which then travels to all the cells to which the
-cell is attached. Normally the mitochondria are very small in number and have
-about 60 cells per gram, the cell wall containing about 40 mitochondria. This
-type of process can occur in two ways, through the accumulation of electrons
-which then are sent to the nucleus where they can be used for the following
-activities.
-```
-
-Fluent and on-topic; the biochemistry is wrong. That is the expected shape for a
-model this size — syntax and register arrive well before factual reliability.
+Sample output from both checkpoints is in [Demo](#demo) above.
 
 ## Architecture
 
