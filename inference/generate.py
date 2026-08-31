@@ -19,10 +19,9 @@ def sample_next(logits, temperature, top_k):
 
 
 @torch.no_grad()
-def generate(model, tokenizer, prompt="", max_new_tokens=200, temperature=0.8, top_k=50, device=None):
-    # Sample one token at a time. Keys and values for earlier tokens are cached,
-    # so each step only runs the newest token through the network instead of
-    # re-reading the whole context.
+def generate_stream(model, tokenizer, prompt="", max_new_tokens=200, temperature=0.8, top_k=50, device=None):
+    # Same sampling as generate(), but yields the text so far after every token
+    # so a UI can show it appearing instead of waiting for the whole completion.
     device = device or next(model.parameters()).device
 
     token_ids = tokenizer.encode(prompt) if prompt else [EOT_ID]
@@ -50,8 +49,13 @@ def generate(model, tokenizer, prompt="", max_new_tokens=200, temperature=0.8, t
             logits, cache = model(next_token, cache, use_cache=True)
             logits = logits[:, -1, :]
 
-    # drop the seeded EOT when the caller gave no prompt
-    if not prompt:
-        token_ids = token_ids[1:]
+        # drop the seeded EOT when the caller gave no prompt
+        yield tokenizer.decode(token_ids if prompt else token_ids[1:])
 
-    return tokenizer.decode(token_ids)
+
+def generate(model, tokenizer, prompt="", max_new_tokens=200, temperature=0.8, top_k=50, device=None):
+    # the whole completion at once, for callers that do not want to stream
+    text = prompt
+    for text in generate_stream(model, tokenizer, prompt, max_new_tokens, temperature, top_k, device):
+        pass
+    return text
