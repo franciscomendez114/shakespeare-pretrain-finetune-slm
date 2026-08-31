@@ -2,8 +2,14 @@ import os
 import sys
 from pathlib import Path
 
-# so the app can import model/, inference/ and tokenizer/ from the repo root
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+# find model/, inference/ and tokenizer/. In the repo this file lives in app/
+# so they are one level up; on a Hugging Face Space it sits at the root next
+# to them. Check both instead of assuming a layout.
+_here = Path(__file__).resolve().parent
+for _root in (_here, _here.parent):
+    if (_root / "model").is_dir():
+        sys.path.insert(0, str(_root))
+        break
 
 import gradio as gr
 import torch
