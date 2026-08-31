@@ -15,7 +15,7 @@ from inference.load_model import load_exported_model, load_exported_tokenizer
 # Point MODEL_DIR at a local folder to run without downloading; otherwise the
 # weights come from the Hugging Face repo named by HF_REPO.
 MODEL_DIR = os.environ.get("MODEL_DIR")
-HF_REPO = os.environ.get("HF_REPO", "franciscomendez114/shakespeare-slm")
+HF_REPO = os.environ.get("HF_REPO", "bahamawama/shakespeare-slm")
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
