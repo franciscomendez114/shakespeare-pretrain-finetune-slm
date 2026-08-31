@@ -7,6 +7,20 @@ pretrained weights — the only dependency doing heavy lifting is PyTorch.
 
 Weights: **[bahamawama/shakespeare-slm](https://huggingface.co/bahamawama/shakespeare-slm)**
 
+## Demo
+
+A Gradio app (`app/app.py`) serves both checkpoints with a toggle, sampling
+controls and token-by-token streaming. Same prompt, same settings — only the
+checkpoint differs.
+
+**Fine-tuned on Shakespeare:**
+
+![The fine-tuned model answering a ROMEO: prompt in play format](docs/app-finetuned.png)
+
+**The same prompt, pretrained model only:**
+
+![The pretrained model continuing ROMEO: as ordinary web prose](docs/app-pretrained.png)
+
 ## Results
 
 A 172.6M-parameter model pretrained on 3.45B tokens of FineWeb-Edu, then
@@ -32,29 +46,29 @@ Same prompt, same sampling settings, same app — only the checkpoint differs.
 in the register it was trained on:
 
 ```
-ROMEO: Here, the right layer of the data has been scanned to ensure the correct
-amount of text and images were produced.
-PART 3: PART 4 – ANOTHERAPY HANDLETON BASED: This data file is expected to be
-created using the following NFT format.
+ROMEO: When I was in college, my main area of interest was in the history of
+science and technology. A lot of my research was devoted to micro-scale analysis,
+but the big question was how do people want to handle it?
+A lot has been written about micro scale analysis, and the big question, in
+relation to the big question is how do people want to handle it?
 ```
 
 **After fine-tuning.** Play structure, alternating speakers, Elizabethan register:
 
 ```
 ROMEO:
-Who can do the great thing?
+How now! how now! how now! what's that? what is't, I do not know,
+For that which we say hath been our Lord's seal;
+But that for the meaning which we grant, it was the right
+Of the king to be the king's sworn seal.
 
-KING RICHARD II:
-Let me go: never shall you but make two
-men follow me. But forbear me; and let her go.
-Ah shalt not be too far off; but I'll have you by:
-The king of France and her friends, I mean well
-To pluck them out of the barren countryside,
-And from there with my hither, we will meet all day.
+KING HENRY VI:
+'Tis God's seal and all his possessions
+Upon his knees.
 
-HENRY BOLINGBROKE:
-But when thou shalt go into the battle and see
-Your maj
+LUCIO:
+My lord, we have no right nor lawful claim
+To the crown our king holds in the hands.
 ```
 
 The pretrained model is a competent web-text continuer on its own ground:
