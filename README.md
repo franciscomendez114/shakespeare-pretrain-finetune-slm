@@ -270,7 +270,8 @@ datasets.
 At 172.6M parameters trained on 3.45B tokens, output is fluent and locally
 coherent but not globally sensible. Specifically:
 
-- **Facts are unreliable.** The mitochondria sample above is confidently wrong.
+- **Facts are unreliable.** See the French Revolution sample in [Demo](#demo) —
+  fluent, well-formed, and wrong in almost every particular.
 - **Low temperature collapses into loops.** See the Generation section.
 - **Character names drift mid-word.** Names are rare multi-token sequences, so
   the model composes them subword by subword and produces blends like
