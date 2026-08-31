@@ -9,15 +9,18 @@ __pycache__/
 .env.*
 !.env.example
 
-# Downloaded corpora and interrupted downloads
-data/raw/*fineweb*.txt
+# Corpora are never committed -- fetch them with data/scripts/download_*.py.
+# This covers tiny Shakespeare too, so raw data is handled the same way
+# everywhere and there is no "is this already here?" ambiguity.
+data/raw/*.txt
 data/**/*.part
 
 # Generated token arrays
 data/processed/*.bin
 
-# Model outputs (tokenizer artifacts are intentionally not ignored)
-checkpoints/**
+# Model outputs (tokenizer artifacts are intentionally not ignored).
+# The checkpoints/ folders themselves stay in the repo via .gitkeep so the
+# expected layout is visible; only the weight files are ignored.
 *.pt
 *.pth
 *.ckpt
